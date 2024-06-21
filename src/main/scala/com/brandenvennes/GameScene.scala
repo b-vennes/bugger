@@ -3,6 +3,7 @@ package com.brandenvennes
 import indigo.*
 import indigo.scenes.*
 import monocle.syntax.all.*
+import com.brandenvennes.generated.Assets
 
 object GameScene extends Scene[StartUpData, Model, ViewModel]:
 
@@ -28,9 +29,9 @@ object GameScene extends Scene[StartUpData, Model, ViewModel]:
       context: SceneContext[StartUpData],
       model: SceneModel
   ): GlobalEvent => Outcome[SceneModel] =
-    case KeyboardEvent.KeyUp(Key.LEFT_ARROW) => Outcome(model.moveBugslyLeft)
+    case KeyboardEvent.KeyUp(Key.LEFT_ARROW)  => Outcome(model.moveBugslyLeft)
     case KeyboardEvent.KeyUp(Key.RIGHT_ARROW) => Outcome(model.moveBugslyRight)
-    case KeyboardEvent.KeyUp(Key.UP_ARROW) => Outcome(model.moveBugslyUp)
+    case KeyboardEvent.KeyUp(Key.UP_ARROW)    => Outcome(model.moveBugslyUp)
     case FrameTick =>
       if model.checkCollision then Outcome(Model.initial(model.dice))
       else Outcome(model.tick(context.delta))
@@ -43,10 +44,10 @@ object GameScene extends Scene[StartUpData, Model, ViewModel]:
   ): GlobalEvent => Outcome[SceneViewModel] =
     _ => Outcome(viewModel)
 
-  val lanes = 10
+  val lanes      = 10
   val leftBuffer = 50
-  val size = 32
-  val halfSize = 16
+  val size       = 32
+  val halfSize   = 16
 
   def present(
       context: SceneContext[StartUpData],
@@ -55,28 +56,50 @@ object GameScene extends Scene[StartUpData, Model, ViewModel]:
   ): Outcome[SceneUpdateFragment] =
     logger.debugOnce(model.toString())
     Outcome(
-      SceneUpdateFragment
-        .empty
+      SceneUpdateFragment.empty
         .addLayer(
-          Shape.Line(Point(leftBuffer - 4, 0), Point(leftBuffer, size * (lanes + 3)), Stroke(2, RGBA.DarkBlue)),
-          Shape.Line(Point(leftBuffer + (11 * size) + 4, 0), Point(leftBuffer + (11 * size) + 4, size * (lanes + 3)), Stroke(2, RGBA.DarkBlue)),
+          for
+            x <- Batch.fromSeq(0 to Model.maxX)
+            y <- Batch.fromSeq(0 to lanes + 3)
+          yield Graphic(32, 32, Assets.assets.starsMaterial)
+            .moveTo(leftBuffer + (x * 32), y * 32)
         )
         .addLayer(
-          Shape.Circle(
-            Circle(leftBuffer + (model.bugsly.location.x * size) + halfSize, halfSize + (lanes * size), halfSize),
-            Fill.Color(RGBA.Coral)
+          Shape.Line(
+            Point(leftBuffer - 4, 0),
+            Point(leftBuffer, size * (lanes + 3)),
+            Stroke(2, RGBA.DarkBlue)
+          ),
+          Shape.Line(
+            Point(leftBuffer + (11 * size) + 4, 0),
+            Point(leftBuffer + (11 * size) + 4, size * (lanes + 3)),
+            Stroke(2, RGBA.DarkBlue)
           )
         )
         .addLayer(
-          Batch.fromList(model.cars).map(car =>
-            Shape.Box(
-              Rectangle(leftBuffer + (car.location.x * size), (lanes - (model.bugsly.location.y - car.location.y)) * size, size, size),
-              Fill.Color(RGBA.Magenta)))
+          Graphic(32, 32, Assets.assets.shipMaterial)
+            .moveTo(leftBuffer + (model.bugsly.location.x * size), lanes * size)
         )
+        .addLayer(Batch.fromList(model.cars).map { car =>
+          val x              = leftBuffer + (car.location.x * size)
+          val shiftedBack    = x + (halfSize * -car.velocity)
+          val shiftedForward = x + (halfSize * car.velocity)
+          val y = (lanes - (model.bugsly.location.y - car.location.y)) * size
+          Graphic(32, 32, Assets.assets.meteorMaterial)
+            .moveTo(
+              Signal
+                .Lerp(
+                  Point(shiftedBack, y),
+                  Point(shiftedForward, y),
+                  Model.updateTime
+                )
+                .at(model.timeSinceUpdated)
+            )
+        })
         .addLayer(
           TextBox(model.bugsly.location.y.abs.toString())
+            .withFontSize(Pixels(20))
             .withColor(RGBA.Yellow)
-            .scaleBy(Vector2(2, 2))
             .moveTo(Point(10, 10))
         )
     )

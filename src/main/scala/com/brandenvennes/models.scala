@@ -27,7 +27,12 @@ final case class Bugsly(location: Point):
 object Bugsly:
   val initial: Bugsly = Bugsly(Point(4, 0))
 
-final case class Model(dice: Dice, bugsly: Bugsly, cars: List[Car], timeSinceUpdated: Seconds):
+final case class Model(
+    dice: Dice,
+    bugsly: Bugsly,
+    cars: List[Car],
+    timeSinceUpdated: Seconds
+):
   import Model.*
 
   def moveBugslyLeft: Model =
@@ -37,34 +42,45 @@ final case class Model(dice: Dice, bugsly: Bugsly, cars: List[Car], timeSinceUpd
     this.focus(_.bugsly).modify(_.moveRight(maxX))
 
   def moveBugslyUp: Model =
-    this.focus(_.bugsly.location.y)
+    this
+      .focus(_.bugsly.location.y)
       .modify(_ - 1)
       .focus(_.cars)
-      .modify(_
-        .filter(_.location.y < bugsly.location.y + 3)
-        .appended(Car(Point(dice.validX, bugsly.location.y - 10), dice.velocity)))
+      .modify(
+        _.filter(_.location.y < bugsly.location.y + 3)
+          .appended(
+            Car(Point(dice.validX, bugsly.location.y - 10), dice.velocity)
+          )
+      )
 
   def tick(delta: Seconds): Model =
-    if timeSinceUpdated < Seconds(0.3) then this
-      .focus(_.timeSinceUpdated)
-      .modify(_ + delta)
-    else this
-      .focus(_.cars)
-      .modify(cars => cars.map(_.tick(minX, maxX)))
-      .focus(_.timeSinceUpdated)
-      .replace(Seconds(0))
+    if timeSinceUpdated < updateTime then
+      this
+        .focus(_.timeSinceUpdated)
+        .modify(_ + delta)
+    else
+      this
+        .focus(_.cars)
+        .modify(cars => cars.map(_.tick(minX, maxX)))
+        .focus(_.timeSinceUpdated)
+        .replace(Seconds(0))
 
   def checkCollision: Boolean =
     cars.exists(_.location == bugsly.location)
 
 object Model:
   def initial(dice: Dice): Model =
-    Model(dice, Bugsly.initial, (4 to 10).map(y => Car(Point(dice.validX, -y), dice.velocity)).toList, Seconds(0))
+    Model(
+      dice,
+      Bugsly.initial,
+      (4 to 10).map(y => Car(Point(dice.validX, -y), dice.velocity)).toList,
+      Seconds(0)
+    )
 
-  val minX = 0
-  val maxX = 10
+  val minX       = 0
+  val maxX       = 10
+  val updateTime = Seconds(0.3)
 
   extension (dice: Dice)
-    def validX: Int = dice.roll(maxX) - 1
+    def validX: Int   = dice.roll(maxX) - 1
     def velocity: Int = if dice.rollBoolean then 1 else -1
-

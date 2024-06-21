@@ -12,7 +12,9 @@ object Bugger extends IndigoGame[BootData, StartUpData, Model, ViewModel]:
   def initialScene(bootData: BootData): Option[SceneName] =
     None
 
-  def scenes(bootData: BootData): NonEmptyList[Scene[StartUpData, Model, ViewModel]] =
+  def scenes(
+      bootData: BootData
+  ): NonEmptyList[Scene[StartUpData, Model, ViewModel]] =
     NonEmptyList(GameScene)
 
   val eventFilters: EventFilters =
@@ -27,7 +29,10 @@ object Bugger extends IndigoGame[BootData, StartUpData, Model, ViewModel]:
   def initialModel(startupData: StartUpData): Outcome[Model] =
     Outcome(Model.initial(startupData.dice))
 
-  def initialViewModel(startupData: StartUpData, model: Model): Outcome[ViewModel] =
+  def initialViewModel(
+      startupData: StartUpData,
+      model: Model
+  ): Outcome[ViewModel] =
     Outcome(ViewModel())
 
   def setup(
